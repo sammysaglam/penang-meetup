@@ -64,8 +64,11 @@ const server = new ApolloServer({
         },
       ],
     },
+    Mutation: {
+      updateProduct: (_, { id, newName }) => ({ id, newName }),
+    },
     Product: {
-      name: ({ id }: any) => products[id].name,
+      name: ({ id, newName }: any) => newName || products[id].name,
       description: ({ id }: any) => products[id].description,
       price: ({ id }: any) => products[id].price,
       stockQty: ({ id }: any) => products[id].stockQty,

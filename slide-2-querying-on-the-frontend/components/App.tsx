@@ -9,7 +9,7 @@ const StyledWrapper = styled.div`
 
 export const App = () => {
   const { data } = useQuery(gql`
-    query GetProducts {
+    query GetAllProducts {
       products {
         id
         name

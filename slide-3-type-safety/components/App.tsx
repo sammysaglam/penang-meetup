@@ -8,6 +8,7 @@ const StyledWrapper = styled.table`
 
   td {
     border: solid 1px #ccc;
+    padding: 8px 12px;
   }
 `;
 

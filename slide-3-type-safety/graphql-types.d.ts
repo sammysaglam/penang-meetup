@@ -8,3 +8,12 @@ declare module '*/GetProducts.graphql' {
   export default defaultDocument;
 }
     
+
+declare module '*/UpdateProduct.graphql' {
+  import { DocumentNode } from 'graphql';
+  const defaultDocument: DocumentNode;
+  export const UpdateProduct: DocumentNode;
+
+  export default defaultDocument;
+}
+    

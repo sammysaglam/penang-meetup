@@ -6,6 +6,7 @@ import { ThemeProvider } from "styled-components";
 
 import { App as Slide2App } from "../slide-2-querying-on-the-frontend/components/App";
 import { App as Slide3App } from "../slide-3-type-safety/components/App";
+import { App as Slide4App } from "../slide-4-mutations/components/App";
 import { defaultTheme, GlobalStyles } from "./theme/theme";
 
 const client = new ApolloClient({
@@ -21,6 +22,7 @@ ReactDOM.render(
         <Routes>
           <Route element={<Slide2App />} path="/slide-2" />
           <Route element={<Slide3App />} path="/slide-3" />
+          <Route element={<Slide4App />} path="/slide-4" />
         </Routes>
       </ThemeProvider>
     </BrowserRouter>

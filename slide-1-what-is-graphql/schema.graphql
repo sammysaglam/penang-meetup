@@ -4,6 +4,10 @@ type Query {
   users: [User!]!
 }
 
+type Mutation {
+  updateProduct(id: ID!, newName: String!): Product!
+}
+
 type Product {
   id: ID!
   name: String!
