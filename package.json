@@ -5,7 +5,18 @@
   "author": "sammy@saglam.co",
   "license": "MIT",
   "private": true,
+  "scripts": {
+    "start-1": "ts-node-dev ./slide-1-what-is-graphql/index"
+  },
   "dependencies": {
-    "graphql-yoga": "^1.18.3"
+    "graphql": "^16.2.0",
+    "graphql-yoga": "^2.0.0-alpha.7"
+  },
+  "devDependencies": {
+    "eslint": "^8.6.0",
+    "eslint-config-sammy": "^2.0.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "jest": "^27.4.7",
+    "ts-node-dev": "^1.1.8"
   }
 }
