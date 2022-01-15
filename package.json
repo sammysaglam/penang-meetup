@@ -1,0 +1,11 @@
+{
+  "name": "penang-meetup",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "sammy@saglam.co",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "graphql-yoga": "^1.18.3"
+  }
+}
