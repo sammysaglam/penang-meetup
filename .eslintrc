@@ -1,17 +1,7 @@
 {
   "extends": "sammy",
-  "overrides": [
-    {
-      "files": "./src/microservices/**",
-      "rules": {
-        "no-console": "off"
-      }
-    },
-    {
-      "files": "./src/migrations/**",
-      "rules": {
-        "no-console": "off"
-      }
-    }
-  ]
+  "rules": {
+    "@calm/react-intl/missing-formatted-message": "off",
+    "no-console": "off"
+  }
 }

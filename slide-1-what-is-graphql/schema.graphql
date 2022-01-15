@@ -1,0 +1,29 @@
+type Query {
+  hello: String
+  products: [Product!]!
+  users: [User!]!
+}
+
+type Product {
+  id: ID!
+  name: String!
+  description: String!
+  price: Float
+  stockQty: Int!
+}
+
+type User {
+  id: ID!
+  firstName: String!
+  lastName: String!
+  address: Address!
+  favouriteProducts: [Product!]!
+}
+
+type Address {
+  line1: String!
+  line2: String
+  city: String!
+  country: String!
+  postCode: String!
+}
