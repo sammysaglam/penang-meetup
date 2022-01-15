@@ -7,7 +7,8 @@
   "private": true,
   "scripts": {
     "start-1": "ts-node-dev ./slide-1-what-is-graphql/index",
-    "start-2": "webpack serve"
+    "start-2": "webpack serve",
+    "start-3": "graphql-codegen --config ./slide-3-type-safety/codegen.yml --watch"
   },
   "dependencies": {
     "@apollo/client": "^3.5.7",
