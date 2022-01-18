@@ -7,6 +7,7 @@
   "private": true,
   "scripts": {
     "start:server": "ts-node-dev ./src/server/index",
+    "start:client": "webpack serve",
     "start": "ts-node-dev ./src/server/index & webpack serve",
     "codegen": "graphql-codegen --config ./slide-3-type-safety/codegen.yml --watch"
   },
@@ -19,14 +20,19 @@
     "@types/react-dom": "^17.0.11",
     "@types/styled-components": "^5.1.20",
     "apollo-server": "^3.6.1",
+    "apollo-server-express": "^3.6.2",
     "cross-undici-fetch": "^0.1.16",
     "dotenv": "^12.0.3",
+    "express": "^4.17.2",
     "graphql": "^16.2.0",
+    "graphql-subscriptions": "^2.0.0",
+    "graphql-ws": "^5.5.5",
     "graphql-yoga": "^2.0.0-alpha.7",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-router-dom": "^6.2.1",
-    "styled-components": "^5.3.3"
+    "styled-components": "^5.3.3",
+    "ws": "^8.4.2"
   },
   "devDependencies": {
     "@babel/core": "^7.16.7",
