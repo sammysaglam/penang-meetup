@@ -1,9 +1,0 @@
-mutation UpdateProduct($id: ID!, $newName: String!) {
-  updateProduct(id: $id, newName: $newName) {
-    id
-    name
-    description
-    price
-    stockQty
-  }
-}

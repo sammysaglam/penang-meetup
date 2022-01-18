@@ -6,17 +6,20 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "start-1": "ts-node-dev ./slide-1-what-is-graphql/index",
-    "start-2": "webpack serve",
-    "start-3": "graphql-codegen --config ./slide-3-type-safety/codegen.yml --watch"
+    "start:server": "ts-node-dev ./src/server/index",
+    "start": "ts-node-dev ./src/server/index & webpack serve",
+    "codegen": "graphql-codegen --config ./slide-3-type-safety/codegen.yml --watch"
   },
   "dependencies": {
     "@apollo/client": "^3.5.7",
     "@babel/plugin-transform-runtime": "^7.16.8",
+    "@graphql-tools/stitch": "^8.4.3",
+    "@graphql-tools/stitching-directives": "^2.2.1",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
     "@types/styled-components": "^5.1.20",
     "apollo-server": "^3.6.1",
+    "cross-undici-fetch": "^0.1.16",
     "dotenv": "^12.0.3",
     "graphql": "^16.2.0",
     "graphql-yoga": "^2.0.0-alpha.7",
