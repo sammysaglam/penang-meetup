@@ -1,9 +1,7 @@
-import { makeExecutableSchema } from "@graphql-tools/schema";
 import { stitchSchemas } from "@graphql-tools/stitch";
 import { stitchingDirectives } from "@graphql-tools/stitching-directives";
-import { AsyncExecutor } from "@graphql-tools/utils";
+import { AsyncExecutor, observableToAsyncIterable } from "@graphql-tools/utils";
 import { introspectSchema, wrapSchema } from "@graphql-tools/wrap";
-import { ApolloServer } from "apollo-server";
 import {
   ApolloServerPluginDrainHttpServer,
   ApolloServerPluginLandingPageGraphQLPlayground,
@@ -11,150 +9,121 @@ import {
 import { ApolloServer as ApolloExpressServer } from "apollo-server-express";
 import { fetch } from "cross-undici-fetch";
 import express from "express";
-import { print } from "graphql";
-import { PubSub } from "graphql-subscriptions";
+import { getOperationAST, OperationTypeNode, print } from "graphql";
+import { createClient } from "graphql-ws";
 import { useServer } from "graphql-ws/lib/use/ws";
 import http from "http";
-import { WebSocketServer } from "ws";
+import WebSocket, { WebSocketServer } from "ws";
 
-const pubsub = new PubSub();
+import { productsMicroservice } from "./microservices/products";
+import { usersMicroservice } from "./microservices/users";
+
+const { stitchingDirectivesTransformer } = stitchingDirectives();
 
 (async () => {
-  const {
-    allStitchingDirectivesTypeDefs,
-    stitchingDirectivesValidator,
-    stitchingDirectivesTransformer,
-  } = stitchingDirectives();
+  const microservices = await Promise.all([
+    productsMicroservice(),
+    usersMicroservice(),
+  ]);
 
-  const db = {
-    users: [{ id: "1", name: "Sammy", favouriteProducts: ["1"] }],
-    products: [{ id: "1", name: "T-shirt" }],
-  };
+  const remoteSchemas = await Promise.all(
+    microservices.map(async (endpoint) => {
+      const httpExecutor: AsyncExecutor = async ({
+        document,
+        variables,
+        operationName,
+        extensions,
+      }) => {
+        const query = print(document);
+        const fetchResult = await fetch(`http://${endpoint}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query, variables, operationName, extensions }),
+        });
+        return fetchResult.json();
+      };
 
-  const productsTypeDefs = `
-  ${allStitchingDirectivesTypeDefs}
+      const subscriptionClient = createClient({
+        url: `ws://${endpoint}`,
+        webSocketImpl: WebSocket,
+      });
 
-  type Product {
-    id: ID!
-    name: String!
-  }
+      const wsExecutor: AsyncExecutor = async ({
+        document,
+        variables,
+        operationName,
+        extensions,
+      }) =>
+        observableToAsyncIterable({
+          subscribe: (observer) => ({
+            unsubscribe: subscriptionClient.subscribe(
+              {
+                query: print(document),
+                variables: variables as Record<string, any>,
+                operationName,
+                extensions,
+              },
+              {
+                next: (data) => observer.next && observer.next(data as any),
+                error: (err) => {
+                  if (!observer.error) {
+                    return;
+                  }
+                  if (err instanceof Error) {
+                    observer.error(err);
+                  } else if (err instanceof CloseEvent) {
+                    observer.error(
+                      new Error(`Socket closed with event ${err.code}`),
+                    );
+                  } else if (Array.isArray(err)) {
+                    // graphQLError[]
+                    observer.error(
+                      new Error(err.map(({ message }) => message).join(", ")),
+                    );
+                  }
+                },
+                complete: () => observer.complete && observer.complete(),
+              },
+            ),
+          }),
+        });
 
-  type User {
-    favouriteProducts: [Product!]!
-    hello: String
-  }
+      const executor: AsyncExecutor = async (args) => {
+        // get the operation node of from the document that should be executed
+        const operation = getOperationAST(args.document, args.operationName);
+        // subscription operations should be handled by the wsExecutor
+        if (operation?.operation === OperationTypeNode.SUBSCRIPTION) {
+          return wsExecutor(args);
+        }
+        // all other operations should be handles by the httpExecutor
+        return httpExecutor(args);
+      };
 
-type Mutation {
-  sammy: String
-}
-  
-  type Subscription {
-    sammy: String
-  }
+      const remoteSchema = wrapSchema({
+        schema: await introspectSchema(executor),
+        executor,
+      });
 
-  type Query {
-    products: [Product!]!
-
-    # merge resolvers
-    _sdl: String!
-    mergedUsers(ids: [ID!]!): [User!]!
-  }
-`;
-
-  const productsSchema = stitchingDirectivesValidator(
-    makeExecutableSchema({
-      typeDefs: productsTypeDefs,
-      resolvers: {
-        Query: {
-          products: () => db.products,
-
-          _sdl: () => productsTypeDefs,
-          mergedUsers: (root, { ids }) => ids.map((id: any) => ({ id })),
-        },
-        Mutation: {
-          sammy: () => {
-            pubsub.publish("POST_CREATED", {
-              sammy: "event!",
-            });
-
-            return "sammy";
+      return {
+        schema: remoteSchema,
+        merge: {
+          User: {
+            fieldName: "mergedUsers",
+            selectionSet: "{ id }",
+            key: ({ id }: any) => id,
+            argsFromKeys: (ids: any) => ({ ids }),
           },
         },
-        Subscription: {
-          sammy: {
-            subscribe: () => pubsub.asyncIterator(["POST_CREATED"]),
-          },
-        },
-        User: {
-          favouriteProducts: () => db.products,
-          hello: () => "world",
-        },
-      },
+      };
     }),
   );
-
-  const productsServer = new ApolloServer({
-    schema: productsSchema,
-    plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
-  })
-    .listen({ port: 4001 })
-    .then(({ url }) => console.log(`running on ${url}`));
-
-  const executor: AsyncExecutor = async ({ document, variables }) => {
-    const query = print(document);
-    console.log(query);
-    const fetchResult = await fetch("http://localhost:4001/graphql", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ query, variables }),
-    });
-    return fetchResult.json();
-  };
-
-  const remoteProductsSchema = wrapSchema({
-    schema: await introspectSchema(executor),
-    executor,
-  });
-
-  const usersSchema = makeExecutableSchema({
-    typeDefs: `
-      type User {
-        id: ID!
-        name: String
-      }
-
-      type Query {
-        users: [User!]!
-      }
-    `,
-    resolvers: {
-      Query: {
-        users: () => db.users,
-      },
-    },
-  });
-
-  const productsSubschema = {
-    schema: remoteProductsSchema,
-    merge: {
-      User: {
-        fieldName: "mergedUsers",
-        selectionSet: "{ id }",
-        key: ({ id }: any) => id,
-        argsFromKeys: (ids: any) => ({ ids }),
-      },
-    },
-  };
-  const usersSubschema = {
-    schema: usersSchema,
-  };
 
   // build the combined schema
   const gatewaySchema = stitchSchemas({
     subschemaConfigTransforms: [stitchingDirectivesTransformer],
-    subschemas: [productsSubschema, usersSubschema],
+    subschemas: remoteSchemas,
   });
 
   const app = express();
