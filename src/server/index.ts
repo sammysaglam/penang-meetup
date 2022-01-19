@@ -15,6 +15,7 @@ import { useServer } from "graphql-ws/lib/use/ws";
 import http from "http";
 import WebSocket, { WebSocketServer } from "ws";
 
+import { blogPostsMicroservice } from "./microservices/blog-posts";
 import { productsMicroservice } from "./microservices/products";
 import { usersMicroservice } from "./microservices/users";
 
@@ -24,6 +25,7 @@ const { stitchingDirectivesTransformer } = stitchingDirectives();
   const microservices = await Promise.all([
     productsMicroservice(),
     usersMicroservice(),
+    blogPostsMicroservice(),
   ]);
 
   const remoteSchemas = await Promise.all(
@@ -35,6 +37,7 @@ const { stitchingDirectivesTransformer } = stitchingDirectives();
         extensions,
       }) => {
         const query = print(document);
+
         const fetchResult = await fetch(`http://${endpoint}`, {
           method: "POST",
           headers: {
@@ -110,10 +113,26 @@ const { stitchingDirectivesTransformer } = stitchingDirectives();
         schema: remoteSchema,
         merge: {
           User: {
-            fieldName: "mergedUsers",
+            fieldName: "_entities",
             selectionSet: "{ id }",
             key: ({ id }: any) => id,
-            argsFromKeys: (ids: any) => ({ ids }),
+            argsFromKeys: (ids: any) => ({
+              representations: ids.map((id: string) => ({
+                __typename: "User",
+                id,
+              })),
+            }),
+          },
+          Product: {
+            fieldName: "_entities",
+            selectionSet: "{ id }",
+            key: ({ id }: any) => id,
+            argsFromKeys: (ids: any) => ({
+              representations: ids.map((id: string) => ({
+                __typename: "Product",
+                id,
+              })),
+            }),
           },
         },
       };

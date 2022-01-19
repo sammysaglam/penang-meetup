@@ -17,36 +17,32 @@ import { WebSocketServer } from "ws";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const pubsub = new PubSub();
 
-const NAME = "Products";
-const PORT = 4001;
+const NAME = "Blog Posts";
+const PORT = 4003;
 
 const db = {
-  products: [{ id: "1", name: "T-shirt" }],
+  blogPosts: [{ id: "1", title: "T-shirt" }],
 };
 
-export const productsMicroservice = async () => {
+export const blogPostsMicroservice = async () => {
   const typeDefs = `
-    type Product {
+    type BlogPost {
       id: ID!
-      name: String!
+      title: String!
     }
 
     extend type User @key(fields: "id") {
       id: ID! @external
-      favouriteProducts: [Product!]!
-      hello: String
+      blogPosts: [BlogPost!]!
     }
 
-    type Mutation {
-      sammy: String
-    }
-    
-    type Subscription {
-      sammy: String
+    extend type Product @key(fields: "id") {
+      id: ID! @external
+      relevantBlogPostsForProduct: [BlogPost!]!
     }
 
     type Query {
-      products: [Product!]!
+      blogPosts: [BlogPost!]!
     }
   `;
 
@@ -57,28 +53,15 @@ export const productsMicroservice = async () => {
     typeDefs: stitchingSDL,
     resolvers: {
       Query: {
-        products: () => db.products,
-
+        blogPosts: () => db.blogPosts,
         _entities: (root, { representations }) =>
           representations.map((representation: any) => representation),
       },
-      Mutation: {
-        sammy: () => {
-          pubsub.publish("POST_CREATED", {
-            sammy: "event!",
-          });
-
-          return "sammy";
-        },
-      },
-      Subscription: {
-        sammy: {
-          subscribe: () => pubsub.asyncIterator(["POST_CREATED"]),
-        },
-      },
       User: {
-        favouriteProducts: () => db.products,
-        hello: () => "world",
+        blogPosts: () => db.blogPosts,
+      },
+      Product: {
+        relevantBlogPostsForProduct: () => db.blogPosts,
       },
       _Entity: {
         __resolveType: ({ __typename }: any) => __typename,

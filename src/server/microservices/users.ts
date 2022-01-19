@@ -1,5 +1,8 @@
 import { makeExecutableSchema } from "@graphql-tools/schema";
-import { stitchingDirectives } from "@graphql-tools/stitching-directives";
+import {
+  federationToStitchingSDL,
+  stitchingDirectives,
+} from "@graphql-tools/stitching-directives";
 import {
   ApolloServerPluginDrainHttpServer,
   ApolloServerPluginLandingPageGraphQLPlayground,
@@ -21,13 +24,8 @@ const db = {
   users: [{ id: "1", name: "Sammy" }],
 };
 
-const { allStitchingDirectivesTypeDefs, stitchingDirectivesValidator } =
-  stitchingDirectives();
-
 export const usersMicroservice = async () => {
   const typeDefs = `
-    ${allStitchingDirectivesTypeDefs}
-
     type User {
       id: ID!
       name: String
@@ -35,23 +33,20 @@ export const usersMicroservice = async () => {
 
     type Query {
       users: [User!]!
-
-      # merge resolvers
-      _sdl: String!
-      mergedUsers(ids: [ID!]!): [User!]!
     }
   `;
 
-  const executableSchema = stitchingDirectivesValidator(
-    makeExecutableSchema({
-      typeDefs,
-      resolvers: {
-        Query: {
-          users: () => db.users,
-        },
+  const config = stitchingDirectives();
+  const stitchingSDL = federationToStitchingSDL(typeDefs, config);
+
+  const executableSchema = makeExecutableSchema({
+    typeDefs: stitchingSDL,
+    resolvers: {
+      Query: {
+        users: () => db.users,
       },
-    }),
-  );
+    },
+  });
 
   const app = express();
   const httpServer = http.createServer(app);
