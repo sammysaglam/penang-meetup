@@ -123,7 +123,7 @@ const { stitchingDirectivesTransformer } = stitchingDirectives();
             key: ({ id }: any) => id,
             argsFromKeys: (ids: any) => ({
               representations: ids.map((id: string) => ({
-                __typename: "User",
+                __typename: type.name,
                 id,
               })),
             }),
