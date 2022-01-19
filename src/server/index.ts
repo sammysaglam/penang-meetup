@@ -9,7 +9,12 @@ import {
 import { ApolloServer as ApolloExpressServer } from "apollo-server-express";
 import { fetch } from "cross-undici-fetch";
 import express from "express";
-import { getOperationAST, OperationTypeNode, print } from "graphql";
+import {
+  getOperationAST,
+  OperationTypeNode,
+  print,
+  printSchema,
+} from "graphql";
 import { createClient } from "graphql-ws";
 import { useServer } from "graphql-ws/lib/use/ws";
 import http from "http";
@@ -109,10 +114,10 @@ const { stitchingDirectivesTransformer } = stitchingDirectives();
         executor,
       });
 
-      return {
-        schema: remoteSchema,
-        merge: {
-          User: {
+      const mergeTypes = Object.fromEntries(
+        (remoteSchema as any)._typeMap._Entity?._types?.map((type: any) => [
+          type.name,
+          {
             fieldName: "_entities",
             selectionSet: "{ id }",
             key: ({ id }: any) => id,
@@ -123,18 +128,12 @@ const { stitchingDirectivesTransformer } = stitchingDirectives();
               })),
             }),
           },
-          Product: {
-            fieldName: "_entities",
-            selectionSet: "{ id }",
-            key: ({ id }: any) => id,
-            argsFromKeys: (ids: any) => ({
-              representations: ids.map((id: string) => ({
-                __typename: "Product",
-                id,
-              })),
-            }),
-          },
-        },
+        ]) || [],
+      );
+
+      return {
+        schema: remoteSchema,
+        merge: mergeTypes,
       };
     }),
   );
