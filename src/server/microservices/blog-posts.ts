@@ -31,8 +31,9 @@ export const blogPostsMicroservice = async () => {
       title: String!
     }
 
-    extend type User @key(fields: "id") {
-      id: ID! @external
+    extend type User @key(fields: "userId sammyId sammy { bro }") {
+      userId: ID! @external
+      sammyId: String! @external
       blogPosts: [BlogPost!]!
     }
 
@@ -43,6 +44,7 @@ export const blogPostsMicroservice = async () => {
 
     type Query {
       blogPosts: [BlogPost!]!
+      _sdl: String!
     }
   `;
 
@@ -54,11 +56,17 @@ export const blogPostsMicroservice = async () => {
     resolvers: {
       Query: {
         blogPosts: () => db.blogPosts,
+
+        _sdl: () => stitchingSDL,
         _entities: (root, { representations }) =>
           representations.map((representation: any) => representation),
       },
       User: {
-        blogPosts: () => db.blogPosts,
+        blogPosts: (root) => {
+          console.log("x", { root });
+
+          return db.blogPosts;
+        },
       },
       Product: {
         relevantBlogPostsForProduct: () => db.blogPosts,

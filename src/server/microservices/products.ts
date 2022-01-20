@@ -31,8 +31,9 @@ export const productsMicroservice = async () => {
       name: String!
     }
 
-    extend type User @key(fields: "id") {
-      id: ID! @external
+    extend type User @key(fields: "userId sammyId") {
+      userId: ID! @external
+      sammyId: String! @external
       favouriteProducts: [Product!]!
       hello: String
     }
@@ -47,6 +48,7 @@ export const productsMicroservice = async () => {
 
     type Query {
       products: [Product!]!
+      _sdl: String!
     }
   `;
 
@@ -59,6 +61,7 @@ export const productsMicroservice = async () => {
       Query: {
         products: () => db.products,
 
+        _sdl: () => stitchingSDL,
         _entities: (root, { representations }) =>
           representations.map((representation: any) => representation),
       },
@@ -79,6 +82,12 @@ export const productsMicroservice = async () => {
       User: {
         favouriteProducts: () => db.products,
         hello: () => "world",
+      },
+      Product: {
+        id: (root) => {
+          console.log({ root });
+          return root.id;
+        },
       },
       _Entity: {
         __resolveType: ({ __typename }: any) => __typename,

@@ -21,18 +21,27 @@ const NAME = "Users";
 const PORT = 4002;
 
 const db = {
-  users: [{ id: "1", name: "Sammy" }],
+  users: [
+    { userId: "1", name: "Sammy", sammyId: "dude", sammy: { bro: "bro" } },
+  ],
 };
 
 export const usersMicroservice = async () => {
   const typeDefs = `
+    type Sammy {
+      bro: String!
+    }
+
     type User {
-      id: ID!
+      userId: ID!
+      sammyId: String!
       name: String
+      sammy: Sammy
     }
 
     type Query {
       users: [User!]!
+      _sdl: String!
     }
   `;
 
@@ -44,6 +53,8 @@ export const usersMicroservice = async () => {
     resolvers: {
       Query: {
         users: () => db.users,
+
+        _sdl: () => stitchingSDL,
       },
     },
   });

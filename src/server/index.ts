@@ -1,20 +1,14 @@
+import { makeExecutableSchema } from "@graphql-tools/schema";
 import { stitchSchemas } from "@graphql-tools/stitch";
 import { stitchingDirectives } from "@graphql-tools/stitching-directives";
 import { AsyncExecutor, observableToAsyncIterable } from "@graphql-tools/utils";
-import { introspectSchema, wrapSchema } from "@graphql-tools/wrap";
-import {
-  ApolloServerPluginDrainHttpServer,
-  ApolloServerPluginLandingPageGraphQLPlayground,
-} from "apollo-server-core";
+import { wrapSchema } from "@graphql-tools/wrap";
+import { ApolloServerPluginDrainHttpServer } from "apollo-server-core";
 import { ApolloServer as ApolloExpressServer } from "apollo-server-express";
 import { fetch } from "cross-undici-fetch";
 import express from "express";
-import {
-  getOperationAST,
-  OperationTypeNode,
-  print,
-  printSchema,
-} from "graphql";
+import { getOperationAST, OperationTypeNode, print } from "graphql";
+import gql from "graphql-tag";
 import { createClient } from "graphql-ws";
 import { useServer } from "graphql-ws/lib/use/ws";
 import http from "http";
@@ -109,31 +103,29 @@ const { stitchingDirectivesTransformer } = stitchingDirectives();
         return httpExecutor(args);
       };
 
+      const sdlResponse: any = await httpExecutor({
+        document: gql`
+          {
+            _sdl
+          }
+        `,
+      });
+
+      const sdl = sdlResponse?.data?._sdl;
+
+      console.log(sdl);
+
+      if (!sdl) {
+        throw new Error("microservice SDL could not be found!");
+      }
+
       const remoteSchema = wrapSchema({
-        schema: await introspectSchema(executor),
+        schema: makeExecutableSchema({ typeDefs: sdl }),
         executor,
       });
 
-      const mergeTypes = Object.fromEntries(
-        (remoteSchema as any)._typeMap._Entity?._types?.map((type: any) => [
-          type.name,
-          {
-            fieldName: "_entities",
-            selectionSet: "{ id }",
-            key: ({ id }: any) => id,
-            argsFromKeys: (ids: any) => ({
-              representations: ids.map((id: string) => ({
-                __typename: type.name,
-                id,
-              })),
-            }),
-          },
-        ]) || [],
-      );
-
       return {
         schema: remoteSchema,
-        merge: mergeTypes,
       };
     }),
   );
