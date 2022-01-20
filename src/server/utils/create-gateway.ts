@@ -57,10 +57,14 @@ export const createGateway = async ({
       }) => {
         const query = print(document);
 
+        const fallback = { req: { headers: {} } };
+
         const fetchResult = await fetch(`http://${endpoint}`, {
           method: "POST",
           headers: {
-            ...(await buildHeaders?.((contextForHttpExecutor as any) || {})),
+            ...(await buildHeaders?.(
+              contextForHttpExecutor?.value || fallback,
+            )),
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ query, variables, operationName, extensions }),
@@ -198,7 +202,7 @@ export const createGateway = async ({
   const apolloServer = new ApolloExpressServer({
     schema: finalSchema,
     plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
-    context: (contextForHttpExecutor) => contextForHttpExecutor,
+    context: (contextForHttpExecutor) => ({ value: contextForHttpExecutor }),
   });
 
   await apolloServer.start();
