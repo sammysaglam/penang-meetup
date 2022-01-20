@@ -144,9 +144,8 @@ export const createGateway = async ({
             return true;
         }
       }),
-      new FilterRootFields((operationName, fieldName, fieldConfig) => {
+      new FilterRootFields((operationName, fieldName) => {
         if (operationName === "Query") {
-          console.log(fieldName);
           switch (fieldName) {
             case "_sdl":
               return false;
