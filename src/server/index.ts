@@ -149,15 +149,12 @@ const { stitchingDirectivesTransformer } = stitchingDirectives();
 
   const apolloServer = new ApolloExpressServer({
     schema: gatewaySchema,
-    plugins: [
-      ApolloServerPluginDrainHttpServer({ httpServer }),
-      ApolloServerPluginLandingPageGraphQLPlayground(),
-    ],
+    plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
   });
 
   await apolloServer.start();
 
-  apolloServer.applyMiddleware({ app, path: "/graphql" });
+  apolloServer.applyMiddleware({ app, path: "/graphql", cors: true });
 
   const server = app.listen(4000, () => {
     // create and use the websocket server
