@@ -10,23 +10,32 @@ import {
 } from "apollo-server-express";
 import { fetch } from "cross-undici-fetch";
 import express from "express";
-import { getOperationAST, OperationTypeNode, print } from "graphql";
+import {
+  ExecutionArgs,
+  getOperationAST,
+  OperationTypeNode,
+  print,
+} from "graphql";
 import gql from "graphql-tag";
-import { createClient, ServerOptions } from "graphql-ws";
+import { Context, createClient, SubscribeMessage } from "graphql-ws";
 import { useServer } from "graphql-ws/lib/use/ws";
 import http from "http";
 import WebSocket, { WebSocketServer } from "ws";
 
 // eslint-disable-next-line @typescript-eslint/ban-types
-type CreateGatewayParameters<TContext = {}> = {
+type CreateGatewayParameters = {
   port?: number;
   microservices: { endpoint: string }[];
 
-  context?: (expressContext: ExpressContext) => TContext;
-  subscriptionContext?: ServerOptions["context"];
+  buildHeaders?: (
+    expressContext: ExpressContext,
+  ) => Record<string, string | undefined | unknown>;
 
-  buildHeaders?: (context: any) => Record<string, string>;
-  buildSubscriptionConnectionParams?: (context: any) => Record<string, string>;
+  buildSubscriptionConnectionParams?: (
+    context: Context,
+    message: SubscribeMessage,
+    args: ExecutionArgs,
+  ) => Record<string, string | undefined | unknown>;
 };
 
 export const createGateway = async ({
@@ -34,8 +43,6 @@ export const createGateway = async ({
   port,
   buildHeaders,
   buildSubscriptionConnectionParams,
-  context,
-  subscriptionContext,
 }: CreateGatewayParameters) => {
   const { stitchingDirectivesTransformer } = stitchingDirectives();
 
@@ -53,7 +60,7 @@ export const createGateway = async ({
         const fetchResult = await fetch(`http://${endpoint}`, {
           method: "POST",
           headers: {
-            ...buildHeaders?.(contextForHttpExecutor),
+            ...buildHeaders?.((contextForHttpExecutor as any) || {}),
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ query, variables, operationName, extensions }),
@@ -73,7 +80,11 @@ export const createGateway = async ({
           url: `ws://${endpoint}`,
           webSocketImpl: WebSocket,
           connectionParams: () =>
-            buildSubscriptionConnectionParams?.(contextForWsExecutor),
+            buildSubscriptionConnectionParams?.(
+              contextForWsExecutor?.value?.[0],
+              contextForWsExecutor?.value?.[1],
+              contextForWsExecutor?.value?.[2],
+            ),
         });
 
         return observableToAsyncIterable({
@@ -187,7 +198,7 @@ export const createGateway = async ({
   const apolloServer = new ApolloExpressServer({
     schema: finalSchema,
     plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
-    context,
+    context: (contextForHttpExecutor) => contextForHttpExecutor,
   });
 
   await apolloServer.start();
@@ -204,7 +215,7 @@ export const createGateway = async ({
     useServer(
       {
         schema: finalSchema,
-        context: subscriptionContext,
+        context: (...contextForWsExecutor) => ({ value: contextForWsExecutor }),
       },
       wsServer,
     );
