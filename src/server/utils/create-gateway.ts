@@ -22,20 +22,20 @@ import { useServer } from "graphql-ws/lib/use/ws";
 import http from "http";
 import WebSocket, { WebSocketServer } from "ws";
 
+type Headers = Record<string, string | undefined | unknown>;
+
 // eslint-disable-next-line @typescript-eslint/ban-types
 type CreateGatewayParameters = {
   port?: number;
   microservices: { endpoint: string }[];
 
-  buildHeaders?: (
-    expressContext: ExpressContext,
-  ) => Record<string, string | undefined | unknown>;
+  buildHeaders?: (expressContext: ExpressContext) => Promise<Headers> | Headers;
 
   buildSubscriptionConnectionParams?: (
     context: Context,
     message: SubscribeMessage,
     args: ExecutionArgs,
-  ) => Record<string, string | undefined | unknown>;
+  ) => Promise<Headers> | Headers;
 };
 
 export const createGateway = async ({
@@ -60,7 +60,7 @@ export const createGateway = async ({
         const fetchResult = await fetch(`http://${endpoint}`, {
           method: "POST",
           headers: {
-            ...buildHeaders?.((contextForHttpExecutor as any) || {}),
+            ...(await buildHeaders?.((contextForHttpExecutor as any) || {})),
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ query, variables, operationName, extensions }),
