@@ -8,8 +8,12 @@ import {
   ApolloServerPluginDrainHttpServer,
   ApolloServerPluginLandingPageGraphQLPlayground,
 } from "apollo-server-core";
-import { ApolloServer as ApolloExpressServer } from "apollo-server-express";
+import {
+  ApolloServer as ApolloExpressServer,
+  ExpressContext,
+} from "apollo-server-express";
 import express from "express";
+import { ServerOptions } from "graphql-ws";
 import { useServer } from "graphql-ws/lib/use/ws";
 import http from "http";
 import { WebSocketServer } from "ws";
@@ -22,13 +26,15 @@ type CreateMicroserviceParams<TContext = {}> = {
   port: number;
   label: string;
 
-  context?: () => TContext;
+  context?: (expressContext: ExpressContext) => TContext;
+  subscriptionContext?: ServerOptions["context"];
 };
 
 export const createMicroservice = async ({
   typeDefs,
   resolvers,
   context,
+  subscriptionContext,
   label,
   port,
 }: CreateMicroserviceParams) => {
@@ -95,7 +101,13 @@ export const createMicroservice = async ({
         path: "/graphql",
       });
 
-      useServer({ schema: executableSchema }, wsServer);
+      useServer(
+        {
+          schema: executableSchema,
+          context: subscriptionContext,
+        },
+        wsServer,
+      );
 
       console.log(
         `🚀 Microservice "${label}" ready at http://localhost:${port}/graphql`,

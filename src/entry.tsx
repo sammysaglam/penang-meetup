@@ -64,11 +64,16 @@ class WebSocketLink extends ApolloLink {
 const websocketLink = new WebSocketLink({
   url: "ws://localhost:4000/graphql",
   connectionParams: () => ({
-    Authorization: `Bearer sammywashere`,
+    authorization: `Bearer sammywashere`,
   }),
 });
 
-const httpLink = new HttpLink({ uri: "http://localhost:4000/graphql" });
+const httpLink = new HttpLink({
+  uri: "http://localhost:4000/graphql",
+  headers: {
+    authorization: `Bearer sammywashere`,
+  },
+});
 
 const splitLink = split(
   ({ query }) => {

@@ -1,5 +1,5 @@
 import fs from "fs";
-import { PubSub } from "graphql-subscriptions";
+import { PubSub, withFilter } from "graphql-subscriptions";
 import path from "path";
 
 import { createMicroservice } from "../utils/create-microservice";
@@ -36,7 +36,16 @@ export const productsMicroservice = () =>
       },
       Subscription: {
         sammy: {
-          subscribe: () => pubsub.asyncIterator(["POST_CREATED"]),
+          subscribe: withFilter(
+            () => pubsub.asyncIterator(["POST_CREATED"]),
+            (payload, variables, context) => {
+              console.log({
+                subscriptionContext: context,
+              });
+
+              return true;
+            },
+          ),
         },
       },
       User: {
@@ -44,10 +53,16 @@ export const productsMicroservice = () =>
         hello: () => "world",
       },
       Product: {
-        id: (root) => {
-          console.log({ root });
+        id: (root, args, context) => {
+          console.log({ queryContext: context });
           return root.id;
         },
       },
     },
+    context: ({ req }) => ({
+      jwt: req.headers.authorization,
+    }),
+    subscriptionContext: ({ connectionParams }) => ({
+      jwt: connectionParams?.authorization,
+    }),
   });

@@ -10,5 +10,21 @@ import { createGateway } from "./utils/create-gateway";
     blogPostsMicroservice(),
   ]);
 
-  await createGateway({ microservices });
+  await createGateway({
+    microservices,
+
+    buildHeaders: (context: any) => ({
+      "authorization": context?.jwt,
+    }),
+    buildSubscriptionConnectionParams: (context: any) => ({
+      "authorization": context?.jwt,
+    }),
+
+    context: ({ req }) => ({
+      jwt: req.headers.authorization,
+    }),
+    subscriptionContext: ({ connectionParams }) => ({
+      jwt: connectionParams?.authorization,
+    }),
+  });
 })();
