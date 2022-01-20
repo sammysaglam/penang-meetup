@@ -6,7 +6,7 @@ export const App = () => {
     gql`
       {
         users {
-          id
+          userId
           name
           hello
           favouriteProducts {

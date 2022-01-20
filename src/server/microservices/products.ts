@@ -1,20 +1,9 @@
-import { makeExecutableSchema } from "@graphql-tools/schema";
-import {
-  federationToStitchingSDL,
-  stitchingDirectives,
-} from "@graphql-tools/stitching-directives";
-import {
-  ApolloServerPluginDrainHttpServer,
-  ApolloServerPluginLandingPageGraphQLPlayground,
-} from "apollo-server-core";
-import { ApolloServer as ApolloExpressServer } from "apollo-server-express";
-import express from "express";
+import fs from "fs";
 import { PubSub } from "graphql-subscriptions";
-import { useServer } from "graphql-ws/lib/use/ws";
-import http from "http";
-import { WebSocketServer } from "ws";
+import path from "path";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { createMicroservice } from "../utils/create-microservice";
+
 const pubsub = new PubSub();
 
 const NAME = "Products";
@@ -24,46 +13,17 @@ const db = {
   products: [{ id: "1", name: "T-shirt" }],
 };
 
-export const productsMicroservice = async () => {
-  const typeDefs = `
-    type Product {
-      id: ID!
-      name: String!
-    }
-
-    extend type User @key(fields: "userId sammyId") {
-      userId: ID! @external
-      sammyId: String! @external
-      favouriteProducts: [Product!]!
-      hello: String
-    }
-
-    type Mutation {
-      sammy: String
-    }
-    
-    type Subscription {
-      sammy: String
-    }
-
-    type Query {
-      products: [Product!]!
-      _sdl: String!
-    }
-  `;
-
-  const config = stitchingDirectives();
-  const stitchingSDL = federationToStitchingSDL(typeDefs, config);
-
-  const executableSchema = makeExecutableSchema({
-    typeDefs: stitchingSDL,
+export const productsMicroservice = () =>
+  createMicroservice({
+    label: NAME,
+    port: PORT,
+    typeDefs: fs.readFileSync(
+      path.join(__dirname, "products.graphql"),
+      "utf-8",
+    ),
     resolvers: {
       Query: {
         products: () => db.products,
-
-        _sdl: () => stitchingSDL,
-        _entities: (root, { representations }) =>
-          representations.map((representation: any) => representation),
       },
       Mutation: {
         sammy: () => {
@@ -89,42 +49,5 @@ export const productsMicroservice = async () => {
           return root.id;
         },
       },
-      _Entity: {
-        __resolveType: ({ __typename }: any) => __typename,
-      },
     },
   });
-
-  const app = express();
-  const httpServer = http.createServer(app);
-
-  const apolloExpressServer = new ApolloExpressServer({
-    schema: executableSchema,
-    plugins: [
-      ApolloServerPluginDrainHttpServer({ httpServer }),
-      ApolloServerPluginLandingPageGraphQLPlayground(),
-    ],
-  });
-
-  await apolloExpressServer.start();
-
-  apolloExpressServer.applyMiddleware({ app, path: "/graphql" });
-
-  return new Promise((resolve) => {
-    const server = app.listen(PORT, () => {
-      // create and use the websocket server
-      const wsServer = new WebSocketServer({
-        server,
-        path: "/graphql",
-      });
-
-      useServer({ schema: executableSchema }, wsServer);
-
-      console.log(
-        `🚀 ${NAME} microservice ready at http://localhost:${PORT}/graphql`,
-      );
-
-      resolve(`localhost:${PORT}/graphql`);
-    });
-  });
-};

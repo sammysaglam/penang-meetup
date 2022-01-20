@@ -1,0 +1,14 @@
+type Sammy {
+  bro: String!
+}
+
+type User {
+  userId: ID!
+  sammyId: String!
+  name: String
+  sammy: Sammy
+}
+
+type Query {
+  users: [User!]!
+}
