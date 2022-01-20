@@ -14,7 +14,7 @@ import { createGateway } from "./utils/create-gateway";
     microservices,
 
     buildHeaders: ({ req }) => ({
-      "authorization": req?.headers?.authorization,
+      "authorization": req?.headers.authorization,
     }),
     buildSubscriptionConnectionParams: ({ connectionParams }) => ({
       "authorization": connectionParams?.authorization,

@@ -29,7 +29,13 @@ type CreateGatewayParameters = {
   port?: number;
   microservices: { endpoint: string }[];
 
-  buildHeaders?: (expressContext: ExpressContext) => Promise<Headers> | Headers;
+  buildHeaders?: ({
+    req,
+    res,
+  }: {
+    req: ExpressContext["req"] | undefined;
+    res: ExpressContext["res"] | undefined;
+  }) => Promise<Headers> | Headers;
 
   buildSubscriptionConnectionParams?: (
     context: Context,
@@ -57,7 +63,7 @@ export const createGateway = async ({
       }) => {
         const query = print(document);
 
-        const fallback = { req: { headers: {} } };
+        const fallback = { req: undefined, res: undefined };
 
         const fetchResult = await fetch(`http://${endpoint}`, {
           method: "POST",
