@@ -13,10 +13,10 @@ import { createGateway } from "./utils/create-gateway";
   await createGateway({
     microservices,
 
-    buildHeaders: ({ req }) => ({
+    buildHttpHeaders: ({ req }) => ({
       "authorization": req?.headers.authorization,
     }),
-    buildSubscriptionConnectionParams: ({ connectionParams }) => ({
+    buildSubscriptionHeaders: ({ connectionParams }) => ({
       "authorization": connectionParams?.authorization,
     }),
   });

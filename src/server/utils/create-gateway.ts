@@ -29,7 +29,7 @@ type CreateGatewayParameters = {
   port?: number;
   microservices: { endpoint: string }[];
 
-  buildHeaders?: ({
+  buildHttpHeaders?: ({
     req,
     res,
   }: {
@@ -37,7 +37,7 @@ type CreateGatewayParameters = {
     res: ExpressContext["res"] | undefined;
   }) => Promise<Headers> | Headers;
 
-  buildSubscriptionConnectionParams?: (
+  buildSubscriptionHeaders?: (
     context: Context,
     message: SubscribeMessage,
     args: ExecutionArgs,
@@ -47,8 +47,8 @@ type CreateGatewayParameters = {
 export const createGateway = async ({
   microservices,
   port,
-  buildHeaders,
-  buildSubscriptionConnectionParams,
+  buildHttpHeaders,
+  buildSubscriptionHeaders,
 }: CreateGatewayParameters) => {
   const { stitchingDirectivesTransformer } = stitchingDirectives();
 
@@ -68,7 +68,7 @@ export const createGateway = async ({
         const fetchResult = await fetch(`http://${endpoint}`, {
           method: "POST",
           headers: {
-            ...(await buildHeaders?.(
+            ...(await buildHttpHeaders?.(
               contextForHttpExecutor?.value || fallback,
             )),
             "Content-Type": "application/json",
@@ -79,30 +79,32 @@ export const createGateway = async ({
         return fetchResult.json();
       };
 
+      const subscriptionClient = createClient({
+        url: `ws://${endpoint}`,
+        webSocketImpl: WebSocket,
+      });
+
       const wsExecutor: AsyncExecutor = async ({
         document,
         variables,
         operationName,
         extensions,
         context: contextForWsExecutor,
-      }) => {
-        const subscriptionClient = createClient({
-          url: `ws://${endpoint}`,
-          webSocketImpl: WebSocket,
-          connectionParams: () =>
-            buildSubscriptionConnectionParams?.(
-              contextForWsExecutor?.value?.[0],
-              contextForWsExecutor?.value?.[1],
-              contextForWsExecutor?.value?.[2],
-            ),
-        });
-
-        return observableToAsyncIterable({
+      }) =>
+        observableToAsyncIterable({
           subscribe: (observer) => ({
             unsubscribe: subscriptionClient.subscribe(
               {
                 query: print(document),
-                variables: variables as Record<string, any>,
+                variables: {
+                  ...variables,
+
+                  __headers: buildSubscriptionHeaders?.(
+                    contextForWsExecutor?.value?.[0],
+                    contextForWsExecutor?.value?.[1],
+                    contextForWsExecutor?.value?.[2],
+                  ),
+                } as Record<string, any>,
                 operationName,
                 extensions,
               },
@@ -130,7 +132,6 @@ export const createGateway = async ({
             ),
           }),
         });
-      };
 
       const executor: AsyncExecutor = async (args) => {
         // get the operation node of from the document that should be executed

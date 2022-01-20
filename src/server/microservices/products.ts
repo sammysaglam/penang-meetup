@@ -62,7 +62,11 @@ export const productsMicroservice = () =>
     context: ({ req }) => ({
       jwt: req.headers.authorization,
     }),
-    subscriptionContext: ({ connectionParams }) => ({
-      jwt: connectionParams?.authorization,
-    }),
+    subscriptionContext: (ctx, message, args, headers) => {
+      console.log(headers);
+
+      return {
+        jwt: headers?.authorization,
+      };
+    },
   });

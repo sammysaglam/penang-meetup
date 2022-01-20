@@ -13,7 +13,8 @@ import {
   ExpressContext,
 } from "apollo-server-express";
 import express from "express";
-import { ServerOptions } from "graphql-ws";
+import { ExecutionArgs } from "graphql";
+import { Context, SubscribeMessage } from "graphql-ws";
 import { useServer } from "graphql-ws/lib/use/ws";
 import http from "http";
 import { WebSocketServer } from "ws";
@@ -27,7 +28,12 @@ type CreateMicroserviceParams<TContext = {}> = {
   label: string;
 
   context?: (expressContext: ExpressContext) => TContext;
-  subscriptionContext?: ServerOptions["context"];
+  subscriptionContext?: (
+    ctx: Context,
+    message: SubscribeMessage,
+    args: ExecutionArgs,
+    headers: Record<string, string>,
+  ) => Record<string, any>;
 };
 
 export const createMicroservice = async ({
@@ -104,7 +110,10 @@ export const createMicroservice = async ({
       useServer(
         {
           schema: executableSchema,
-          context: subscriptionContext,
+          context: (ctx, message, args) =>
+            subscriptionContext?.(ctx, message, args, {
+              ...(message.payload.variables?.__headers as any),
+            }),
         },
         wsServer,
       );
